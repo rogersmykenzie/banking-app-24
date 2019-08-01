@@ -1,5 +1,8 @@
 import React from 'react';
-import Axios from 'axios';
+import axios from 'axios';
+import {Redirect} from 'react-router-dom';
+import {updateBalance, updateName, updateUsername} from '../redux/reducer';
+import {connect} from 'react-redux'; //Ali said that
 
 class Register extends React.Component {
     constructor() {
@@ -10,7 +13,9 @@ class Register extends React.Component {
             password: '',
             verifyPassword: '',
             username: '',
-            unsuccessfulLogin: false
+            unsuccessfulLogin: false,
+            usernameWasTaken: false,
+            redirect: false
         }
     }
 
@@ -30,11 +35,28 @@ class Register extends React.Component {
                 password: this.state.password,
                 username: this.state.username
             }
+            axios.post('/auth/register', body).then(response => {
+                console.log(response);
+                this.props.updateBalance(response.data.balance);
+                this.props.updateName(response.data.name);
+                this.props.updateUsername(response.data.username);
+                this.setState({redirect: true})
+            })
+            .catch(error => {
+                if(error.request.status === 406 && error.response.data.error === 'USERNAME_TAKEN') {
+                    this.setState({usernameWasTaken: true});
+                }
+            });
         }
     }
 
     render() {
         console.log(this.state);
+
+        if(this.state.redirect === true) {
+            return <Redirect to='/account' />
+        }
+
         return (
             <div>
                 <input 
@@ -76,9 +98,16 @@ class Register extends React.Component {
                 : 
                     null
                 }
+                {
+                    this.state.usernameWasTaken === true
+                ?
+                    <h1>That username is taken. Please try picking another</h1>
+                :
+                    null
+                }
             </div>
         )
     }
 }
 
-export default Register;
+export default connect(undefined, { updateBalance, updateName, updateUsername })(Register);
